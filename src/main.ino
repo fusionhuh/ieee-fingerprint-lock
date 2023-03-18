@@ -1,14 +1,15 @@
 #include <heltec.h>
 #include <Adafruit_Fingerprint.h>
+#include "sensor.h"
+#include "lock.h"
 
 /*
 The idea of this main sketch is to essentially act as a state
 machine that manages transitions based on keypad and fingerprint
-sensor input. Each state transition adds a line of text (could be empty)
-to a buffer that is "flushed" and printed on each loop iteration
+sensor input.
 
-Avoid nasty code in this file, i.e. all sensor operations 
-should be done through an library/API we have written as .cpp/.hpp files
+Avoid nasty code in this file, i.e. all sensor & lock operations 
+should be done through a library/API we have written as .cpp/.hpp files
 */
 
 enum states {
@@ -33,9 +34,12 @@ enum buttons {
 *** buttons for each state transition aren't supposed to be final
 0) waiting state (WAITING):
 
-transition to: once another state has been completed (successfully or not)
-transition away: once a keypad button or the fingerprint sensor
-sends a signal
+  transition to: 
+  a) once another state has been completed (successfully or not)
+  
+  transition away: 
+  b) once a supported keypad button has been pressed or the fingerprint
+  sensor returns a valid fingerprint (to FINGERPRINT_CHECK)
 
 1) state of adding a new fingerprint (FINGERPRINT_ADD)
 
@@ -87,22 +91,64 @@ uint8_t next_state = states.WAITING;
 uint8_t last_button_press = buttons.NO_BUTTON;
 
 void loop() {
-  /*
+  sensor_process();
 
-  poll for button press here
-
-  */
   switch(next_state) {
-  case states.WAITING: // check for sensor/keypad inputs
+  case states.WAITING:
   {  
-  
+    if (!is_fingerprint_ok()) {
+      print_fingerprint_status(); 
+      break; // return to original state
+    }
 
-
+    // some kind of fingerprint detected,
+    // transition state to FINGERPRINT_CHECK
+    next_state = states.FINGERPRINT_CHECK;
   }
+  break;
   case states.FINGERPRINT_ADD:
   {
 
   }
+  break;
+  case states.FINGERPRINT_CHECK:
+  {
+    process_image();
+    if (!is_image_ok()) {
+      print_image_status();
+      next_state = states.WAITING; // return to waiting state
+      break;
+    }
+
+    search_fingerprint();
+    if (!is_fingerprint_found()) {
+      print_search_status();
+      next_state = states.WAITING; // return to waiting state
+      break;
+    }
+
+    // YAY! fingerprint is found!
+    // transition state to DOOR_UNLOCK
+    next_state = states.DOOR_UNLOCK
+  }
+  break;
+  case states.DOOR_UNLOCK:
+  {
+    while (!is_lock_ready()) {
+      wait(1);
+    }
+    unlock();
+
+    // lock is done, transition back to
+    // waiting state
+    next_state = states.WAITING;
+  }
+  break;
+  case states.FINGERPRINT_SEARCH:
+  {
+    // listen for button inputs
+  }
+  break;
   default: // some severe error has occurred
     Serial.println("Severe error has occurred (no recognizable state)")
     return;
