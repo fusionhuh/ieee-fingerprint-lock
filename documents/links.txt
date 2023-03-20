@@ -1,0 +1,4 @@
+
+Pin numberings in further detail:
+https://github.com/Heltec-Aaron-Lee/WiFi_Kit_series/blob/abaddd957201f9ba635ab9a9185316fe5af30023/esp32/docs/source/boards/ESP32-S2-Saola-1.rst
+

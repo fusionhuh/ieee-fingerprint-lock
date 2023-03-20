@@ -1,7 +1,7 @@
 #include <heltec.h>
 #include <Adafruit_Fingerprint.h>
-#include "sensor.h"
-#include "lock.h"
+#include "sensor/sensor.h"
+#include "lock/lock.h"
 
 /*
 The idea of this main sketch is to essentially act as a state
@@ -76,15 +76,14 @@ enum buttons {
   transition away:
   b) from FINGERPRINT_SEARCH when BUTTON_2 is pressed (acts as cancel button)
 
-
-
 */
 
 
 
 void setup() {
-  // put your setup code here, to run once:
-
+  //Heltec.begin(true /*DisplayEnable Enable*/, false /*LoRa Enable*/, true /*Serial Enable*/, true /*LoRa use PABOOST*/); // taken from factory test example
+  sensor_setup();
+  lock_setup();
 }
 
 uint8_t next_state = states.WAITING;

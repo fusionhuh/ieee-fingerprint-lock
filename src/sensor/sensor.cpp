@@ -1,12 +1,12 @@
 #include "sensor.hpp"
-
+#include <heltec.h>
 
 static uint8_t curr_fingerprint_status = 0;
 static uint8_t curr_image_status = 0;
 static uint8_t curr_search_status = 0;
 
 void sensor_setup() {
-    mySerial = SoftwareSerial(2, 3); // unsure about these numbers?
+    mySerial = SoftwareSerial(GPIO_NUM_33, GPIO_NUM_34); // unsure about these pin numbers?
     finger = Adafruit_Fingerprint(&mySerial);
 
     Serial.begin(9600);
