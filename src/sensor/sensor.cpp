@@ -4,6 +4,7 @@
 static uint8_t curr_fingerprint_status = 0;
 static uint8_t curr_image_status = 0;
 static uint8_t curr_search_status = 0;
+static uint16_t running_id = 1;
 
 void sensor_setup() {
     mySerial = SoftwareSerial(GPIO_NUM_33, GPIO_NUM_34); // unsure about these pin numbers?
@@ -45,6 +46,10 @@ bool is_fingerprint_ok() {
     return curr_fingerprint_status == FINGERPRINT_OK;
 }
 
+bool no_fingerprint() {
+    return cur_fingerprint_status == FINGERPRINT_NOFINGER;
+}
+
 void print_fingerprint_status() {
     switch(curr_fingerprint_status) {
     case FINGERPRINT_OK:
@@ -65,8 +70,14 @@ void print_fingerprint_status() {
     }
 }
 
-void process_image() {
+void process_image(uint8_t num=0) {
+  if (num == 0) {
     curr_image_status = finger.image2Tz();
+  }
+  else {
+    curr_image_status = finger.image2Tz(num);
+  }
+
 }
 
 bool is_image_ok() {
@@ -120,6 +131,52 @@ void print_search_status() {
         Serial.println("Unknown error");
         return p;
     }
+}
+
+bool attempt_fingerprint_enrollment() {
+  auto model_status = finger.createModel();
+  if (model_status == FINGERPRINT_OK) {
+    Serial.println("Prints matched!");
+  }
+  else if (model_status == FINGERPRINT_PACKETRECEIVEERR) {
+    Serial.println("Communication error");
+    return false;
+  }
+  else if (model_status == FINGERPRINT_ENROLLMISMATCH) {
+    Serial.println("Fingerprints did not match");
+    return false;
+  }
+  else {
+    Serial.println("Unknown error");
+    return false;
+  }
+
+  // temporarily do dumb solution of just incrementing IDs 
+  auto store_status = finger.storeModel(running_id++);
+  if (store_status == FINGERPRINT_OK) {
+    Serial.println("Fingerprint stored!");
+    return true;
+  }
+  else if (store_status == FINGERPRINT_PACKETRECEIVEERR) {
+    Serial.println("Communication error");
+    return false;
+  }
+  else if (store_status == FINGERPRINT_BADLOCATION) {
+    Serial.println("It seems as though this ID is already in use.");
+    return false;
+  }
+  else if (store_status == FINGERPRINT_FLASHERR) {
+    Serial.println("Error writing to flash.");
+    return false;
+  }
+  else {
+    Serial.println("Unknown error");
+    return false;
+  }
+}
+
+void clear_database() {
+  finger.emptyDatabase();
 }
 
 

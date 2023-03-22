@@ -2,6 +2,7 @@
 #include <Adafruit_Fingerprint.h>
 #include "sensor/sensor.h"
 #include "lock/lock.h"
+#include "keypad/keypad.hpp"
 
 /*
 The idea of this main sketch is to essentially act as a state
@@ -20,16 +21,18 @@ enum states {
   FINGERPRINT_SEARCH
 };
 
-// correspond to buttons on keypad
+// from keypad.hpp:
+/*
 enum buttons { 
-  NO_BUTTON = -1,
-  BUTTON_0,
+  NO_BUTTON,
   BUTTON_1,
   BUTTON_2,
-  BUTTON_3
+  BUTTON_3,
+  BUTTON_4
 };
+*/
 
-/* define several required states:
+/* define required states:
 
 *** buttons for each state transition aren't supposed to be final
 0) waiting state (WAITING):
@@ -83,7 +86,9 @@ enum buttons {
 void setup() {
   //Heltec.begin(true /*DisplayEnable Enable*/, false /*LoRa Enable*/, true /*Serial Enable*/, true /*LoRa use PABOOST*/); // taken from factory test example
   sensor_setup();
+  clear_database();
   lock_setup();
+  keypad_setup();
 }
 
 uint8_t next_state = states.WAITING;
@@ -91,13 +96,20 @@ uint8_t last_button_press = buttons.NO_BUTTON;
 
 void loop() {
   sensor_process();
-
+  keypad_process();
   switch(next_state) {
   case states.WAITING:
   {  
+    while (no_fingerprint()) {
+      if (is_button_pressed(BUTTON_0)) {
+        next_state = states.FINGERPRINT_ADD;
+        break;
+      }
+    }
+
     if (!is_fingerprint_ok()) {
       print_fingerprint_status(); 
-      break; // return to original state
+      break; // return to beginning
     }
 
     // some kind of fingerprint detected,
@@ -105,11 +117,55 @@ void loop() {
     next_state = states.FINGERPRINT_CHECK;
   }
   break;
+
   case states.FINGERPRINT_ADD:
   {
+    while (no_fingerprint()) {
+      // return to waiting state if cancel button is pressed
+      if (is_button_pressed(BUTTON_1)) {
+        next_state = states.WAITING;
+        break;
+      }
+    }
 
+    if (!is_fingerprint_ok()) {
+      print_fingerprint_status();
+      break; // go back to start
+    }
+
+    process_image(1); // 1 means that this is the first fingerprint used for the model
+    if (!is_image_ok()) {
+      Serial.println("Sorry, your fingerprint wasn't clear enough. Please try again.")
+      break; // go back to start
+    }
+
+    Serial.println("Please remove your finger and place it again.");
+    while (no_fingerprint()) {
+      // return to waiting state if cancel button is pressed
+      if (is_button_pressed(BUTTON_1)) {
+        next_state = states.WAITING;
+        break;
+      }
+    }
+
+    if (!is_fingerprint_ok()) {
+      print_fingerprint_status();
+      break; // go back to start
+    }
+
+    process_image(2); // 2 means that this is the second fingerprint used for the model
+    if (!is_image_ok()) {
+      Serial.println("Sorry, your second fingerprint wasn't clear enough. Please repeat this process again.")
+      break; // go back to start
+    }
+
+    if (attempt_fingerprint_enrollment() == false) {
+      Serial.println("Enrollment failed, please try again.")
+      break;
+    }
   }
   break;
+  
   case states.FINGERPRINT_CHECK:
   {
     process_image();
@@ -131,6 +187,7 @@ void loop() {
     next_state = states.DOOR_UNLOCK
   }
   break;
+
   case states.DOOR_UNLOCK:
   {
     while (!is_lock_ready()) {
@@ -143,11 +200,13 @@ void loop() {
     next_state = states.WAITING;
   }
   break;
+
   case states.FINGERPRINT_SEARCH:
   {
     // listen for button inputs
   }
   break;
+
   default: // some severe error has occurred
     Serial.println("Severe error has occurred (no recognizable state)")
     return;

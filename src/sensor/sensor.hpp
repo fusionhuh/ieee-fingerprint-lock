@@ -25,11 +25,14 @@ void sensor_process();
 // checks if last processed fingerprint is actually a fingerprint or something else
 bool is_fingerprint_ok();
 
+// checks if there is absolutely no fingerprint data
+bool no_fingerprint();
+
 // debug -- prints status of last processed fingerprint
 void print_fingerprint_status();
 
 // processes last read fingerprint's image
-void process_image();
+void process_image(uint8_t num);
 
 // checks if successfully processed fingerprint's image
 // is suitable to proceed
@@ -46,3 +49,9 @@ bool is_fingerprint_found();
 
 // debug -- prints status of fingerprint search
 void print_search_status();
+
+// attempts to generate a fingerprint model and enroll it in the database
+bool attempt_fingerprint_enrollment();
+
+// clears sensor's fingerprint database
+void clear_database();
