@@ -1,4 +1,4 @@
-#include <heltec.h>
+#include "Arduino.h"
 #include <Adafruit_Fingerprint.h>
 #include "src/sensor/sensor.hpp"
 #include "src/lock/lock.hpp"
@@ -81,17 +81,24 @@ enum buttons {
 
 */
 
-
-
 void setup() {
   //Heltec.begin(true /*DisplayEnable Enable*/, false /*LoRa Enable*/, true /*Serial Enable*/, true /*LoRa use PABOOST*/); // taken from factory test example
-  sensor_setup();
-  clear_database();
-  lock_setup();
-  keypad_setup();
+  //sensor_setup();
+  //clear_database();
+  //lock_setup();
+  //keypad_setup();
 }
 
 uint8_t next_state = WAITING;
+
+void loop() {
+  Serial.print("testing");
+  Heltec.display->clear();
+  Heltec.display->drawString(20, 20, "Testing!");
+  //display.clear();
+  //display.display();
+  //display.drawString(64, 32-16/2, "Hello World");
+}
 
 void loop() {
   sensor_process();

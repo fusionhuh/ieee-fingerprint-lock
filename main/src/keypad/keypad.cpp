@@ -1,13 +1,12 @@
-#include <heltec.h>
 #include <Adafruit_Keypad.h>
 
 #define KEYPAD_PID1332
 
-#define R1 GPIO_NUM_2
-#define C2 GPIO_NUM_3
-#define C1 GPIO_NUM_4
-#define C4 GPIO_NUM_5
-#define C3 GPIO_NUM_6
+#define R1 13
+#define C2 11
+#define C1 12
+#define C4 9
+#define C3 10
 
 #include "keypad_config.h"
 
