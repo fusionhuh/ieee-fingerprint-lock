@@ -3,7 +3,5 @@
 
 void lock_setup();
 
-bool is_lock_ready();
-
 void unlock();
 

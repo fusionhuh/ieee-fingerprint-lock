@@ -4,6 +4,8 @@
 #include "src/lock/lock.hpp"
 #include "src/keypad/keypad.hpp"
 
+int lock_output_pin = 8;
+
 /*
 The idea of this main sketch is to essentially act as a state
 machine that manages transitions based on keypad and fingerprint
@@ -87,6 +89,8 @@ void setup() {
   //clear_database();
   //lock_setup();
   //keypad_setup();
+  pinMode(lock_output_min, OUTPUT);
+  
 }
 
 uint8_t next_state = WAITING;
