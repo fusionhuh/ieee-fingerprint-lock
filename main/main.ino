@@ -89,8 +89,8 @@ void setup() {
   //clear_database();
   //lock_setup();
   //keypad_setup();
-  pinMode(lock_output_min, OUTPUT);
-  
+  pinMode(lock_output_pin, OUTPUT);
+
 }
 
 uint8_t next_state = WAITING;
