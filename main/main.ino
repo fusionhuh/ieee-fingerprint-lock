@@ -96,11 +96,12 @@ void setup() {
 
 uint8_t next_state = WAITING;
 
+/*
 void loop() {
   //display.clear();
   //display.display();
   //display.drawString(64, 32-16/2, "Hello World");
-}
+}\*/
 
 void loop() {
   sensor_process();
