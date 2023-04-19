@@ -1,15 +1,15 @@
 void lock_setup() {
     digitalWrite(output_pin, HIGH);
-    delay(2);
+    delay(2000);
     digitalWrite(output_pin, LOW);
-    delay(2);
+    delay(2000);
     digitalWrite(output_pin, HIGH);
-    delay(2);
+    delay(2000);
     digitalWrite(output_pin, LOW);
 }
 
 void unlock(uint32_t output_pin) {
     digitalWrite(output_pin, HIGH);
-    delay(3);
+    delay(3000);
     digitalWrite(outout_pin, LOW);
 }

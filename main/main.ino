@@ -200,7 +200,7 @@ void loop() {
 
   case FINGERPRINT_DELETE:
   {
-    clear_database();
+    delete_fingerprint();
   }
 
   case DOOR_UNLOCK:

@@ -4,6 +4,7 @@ static uint8_t curr_fingerprint_status = 0;
 static uint8_t curr_image_status = 0;
 static uint8_t curr_search_status = 0;
 static uint16_t running_id = 1;
+static finger_id = 1;
 
 SoftwareSerial mySerial(2, 3);
 static Adafruit_Fingerprint finger(&mySerial);
@@ -174,6 +175,25 @@ bool attempt_fingerprint_enrollment() {
 void clear_database() {
   finger.emptyDatabase();
 }
+
+void delete_fingerprint() {
+  search_fingerprint();
+
+  if (is_fingerprint_found) {
+    deleteFingerprint(finger.fingerID);
+
+    // turn LED blue
+    finger.LEDcontrol(FINGERPRINT_LED_ON, 0, FINGERPRINT_LED_BLUE);
+    delay(2000);
+    finger.LEDcontrol(FINGERPRINT_LED_OFF, 0, FINGERPRINT_LED_BLUE);
+
+  } else {
+    finger.LEDcontrol(FINGERPRINT_LED_ON, 0, FINGERPRINT_LED_RED);
+    delay(2000);
+    finger.LEDcontrol(FINGERPRINT_LED_OFF, 0, FINGERPRINT_LED_BLUE);
+  }
+}
+
 
 
 

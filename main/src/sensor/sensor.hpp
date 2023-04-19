@@ -54,3 +54,6 @@ bool attempt_fingerprint_enrollment();
 
 // clears sensor's fingerprint database
 void clear_database();
+
+// deletes finger using finger id
+void delete_fingerprint();
