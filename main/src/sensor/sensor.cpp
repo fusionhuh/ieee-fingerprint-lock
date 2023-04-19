@@ -4,7 +4,7 @@ static uint8_t curr_fingerprint_status = 0;
 static uint8_t curr_image_status = 0;
 static uint8_t curr_search_status = 0;
 static uint16_t running_id = 1;
-static finger_id = 1;
+static uint8_t finger_id = 1;
 
 SoftwareSerial mySerial(2, 3);
 static Adafruit_Fingerprint finger(&mySerial);
@@ -16,6 +16,7 @@ void sensor_setup() {
     Serial.println("\nAdafruit finger detect test\n");
 
     finger.begin(57600);
+    finger.LEDcontrol(FINGERPRINT_LED_OFF, 0, FINGERPRINT_LED_RED);
     delay(5);
     if (finger.verifyPassword()) {
         Serial.println("Found fingerprint sensor!");
@@ -36,6 +37,7 @@ void sensor_setup() {
     Serial.print(F("Device address: ")); Serial.println(finger.device_addr, HEX);
     Serial.print(F("Packet len: ")); Serial.println(finger.packet_len);
     Serial.print(F("Baud rate: ")); Serial.println(finger.baud_rate);
+    finger.LEDcontrol(FINGERPRINT_LED_ON, 0, FINGERPRINT_LED_RED);
 }
 
 void sensor_process() {
@@ -47,7 +49,7 @@ bool is_fingerprint_ok() {
 }
 
 bool no_fingerprint() {
-    return curr_fingerprint_status == FINGERPRINT_NOFINGER;
+    return curr_fingerprint_status == FINGERPRINT_NOFINGER || curr_fingerprint_status == FINGERPRINT_IMAGEMESS;
 }
 
 void print_fingerprint_status() {
@@ -149,6 +151,19 @@ bool attempt_fingerprint_enrollment() {
   }
 
   // temporarily do dumb solution of just incrementing IDs 
+  Serial.println("ID: ");
+  Serial.println(finger.fingerID);
+
+  search_fingerprint();
+  if (curr_search_status == FINGERPRINT_OK) {
+    Serial.println("Fingerprint is already stored!");
+    return false;
+  }
+  else if (curr_search_status != FINGERPRINT_NOTFOUND) {
+    Serial.println("Unknown error has occurred while checking fingerprint against database");
+    return false;
+  }
+
   auto store_status = finger.storeModel(running_id++);
   if (store_status == FINGERPRINT_OK) {
     Serial.println("Fingerprint stored!");
@@ -177,21 +192,33 @@ void clear_database() {
 }
 
 void delete_fingerprint() {
-  search_fingerprint();
+  //search_fingerprint();
+  auto p = finger.deleteModel(finger.fingerID);
 
-  if (is_fingerprint_found) {
-    deleteFingerprint(finger.fingerID);
-
-    // turn LED blue
-    finger.LEDcontrol(FINGERPRINT_LED_ON, 0, FINGERPRINT_LED_BLUE);
-    delay(2000);
-    finger.LEDcontrol(FINGERPRINT_LED_OFF, 0, FINGERPRINT_LED_BLUE);
-
-  } else {
-    finger.LEDcontrol(FINGERPRINT_LED_ON, 0, FINGERPRINT_LED_RED);
-    delay(2000);
-    finger.LEDcontrol(FINGERPRINT_LED_OFF, 0, FINGERPRINT_LED_BLUE);
+  switch (p) {
+    case FINGERPRINT_OK:
+      Serial.println("Deleted!");
+      break;
+    case FINGERPRINT_PACKETRECIEVEERR:
+      Serial.println("Communication error");
+      break;
+    case FINGERPRINT_BADLOCATION:
+      Serial.println("Could not delete in that location");
+      break;
+    case FINGERPRINT_FLASHERR:
+      Serial.println("Error writing to flash");
+      break;
   }
+  // turn LED blue
+  /*
+  finger.LEDcontrol(FINGERPRINT_LED_ON, 0, FINGERPRINT_LED_BLUE);
+  delay(2000);
+  finger.LEDcontrol(FINGERPRINT_LED_OFF, 0, FINGERPRINT_LED_BLUE);
+
+  finger.LEDcontrol(FINGERPRINT_LED_ON, 0, FINGERPRINT_LED_RED);
+  delay(2000);
+  finger.LEDcontrol(FINGERPRINT_LED_OFF, 0, FINGERPRINT_LED_BLUE);
+  */
 }
 
 

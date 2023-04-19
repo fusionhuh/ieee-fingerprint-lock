@@ -3,10 +3,10 @@
 #define KEYPAD_PID1332
 
 #define R1 13
-#define C2 11
-#define C1 12
-#define C4 9
-#define C3 10
+#define C2 12
+#define C1 11
+#define C4 10
+#define C3 9
 
 #include "keypad_config.h"
 
@@ -28,7 +28,7 @@ bool is_button_pressed(char button) {
         }
     }
     else {
-        Serial.println("Keypad is not available.");
+        //Serial.println("Keypad is not available.");
         return false;
     }
 }
