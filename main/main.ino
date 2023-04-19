@@ -112,6 +112,8 @@ void loop() {
       if (is_button_pressed(BUTTON_1)) {
         next_state = FINGERPRINT_ADD;
         break;
+      } else if (is_button_pressed(BUTTON_3)) {
+        next_state = FINGERPRINT_DELETE;
       }
     }
 
