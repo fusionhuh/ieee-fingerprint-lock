@@ -198,7 +198,7 @@ void loop() {
 
   case FINGERPRINT_DELETE:
   {
-    // delete fingerprint using sensor function
+    clear_database();
   }
 
   case DOOR_UNLOCK:
