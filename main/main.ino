@@ -19,6 +19,7 @@ enum states {
   WAITING,
   FINGERPRINT_ADD,
   FINGERPRINT_CHECK,
+  FINGERPRINT_DELETE,
   DOOR_UNLOCK,
   DATABASE_SEARCH
 };
@@ -193,6 +194,11 @@ void loop() {
     next_state = DOOR_UNLOCK;
   }
   break;
+
+  case FINGERPRINT_DELETE:
+  {
+    // delete fingerprint using sensor function
+  }
 
   case DOOR_UNLOCK:
   {
