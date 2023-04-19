@@ -33,3 +33,5 @@
 
 # Micro log files
 log.txt
+
+.DS_Store
