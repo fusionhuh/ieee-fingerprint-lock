@@ -96,9 +96,6 @@ void setup() {
 uint8_t next_state = WAITING;
 
 void loop() {
-  Serial.print("testing");
-  Heltec.display->clear();
-  Heltec.display->drawString(20, 20, "Testing!");
   //display.clear();
   //display.display();
   //display.drawString(64, 32-16/2, "Hello World");
