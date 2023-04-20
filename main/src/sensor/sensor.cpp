@@ -37,7 +37,7 @@ void sensor_setup() {
     Serial.print(F("Device address: ")); Serial.println(finger.device_addr, HEX);
     Serial.print(F("Packet len: ")); Serial.println(finger.packet_len);
     Serial.print(F("Baud rate: ")); Serial.println(finger.baud_rate);
-    finger.LEDcontrol(FINGERPRINT_LED_ON, 0, FINGERPRINT_LED_RED);
+    finger.LEDcontrol(FINGERPRINT_LED_ON, 0, FINGERPRINT_LED_BLUE);
 }
 
 void sensor_process() {
@@ -133,6 +133,16 @@ void print_search_status() {
 }
 
 bool attempt_fingerprint_enrollment() {
+  search_fingerprint();
+  if (curr_search_status == FINGERPRINT_OK) {
+    Serial.println("Fingerprint is already stored!");
+    return false;
+  }
+  else if (curr_search_status != FINGERPRINT_NOTFOUND) {
+    Serial.println("Unknown error has occurred while checking fingerprint against database");
+    return false;
+  }
+
   auto model_status = finger.createModel();
   if (model_status == FINGERPRINT_OK) {
     Serial.println("Prints matched!");
@@ -150,21 +160,8 @@ bool attempt_fingerprint_enrollment() {
     return false;
   }
 
-  // temporarily do dumb solution of just incrementing IDs 
-  Serial.println("ID: ");
-  Serial.println(finger.fingerID);
-
-  search_fingerprint();
-  if (curr_search_status == FINGERPRINT_OK) {
-    Serial.println("Fingerprint is already stored!");
-    return false;
-  }
-  else if (curr_search_status != FINGERPRINT_NOTFOUND) {
-    Serial.println("Unknown error has occurred while checking fingerprint against database");
-    return false;
-  }
-
   auto store_status = finger.storeModel(running_id++);
+  Serial.print(running_id);
   if (store_status == FINGERPRINT_OK) {
     Serial.println("Fingerprint stored!");
     return true;
@@ -221,6 +218,26 @@ void delete_fingerprint() {
   */
 }
 
+void sensor_led_activate() {
+  finger.LEDcontrol(FINGERPRINT_LED_BREATHING, 100, FINGERPRINT_LED_BLUE);
+}
+
+void sensor_led_passive() {
+  finger.LEDcontrol(FINGERPRINT_LED_ON, 0, FINGERPRINT_LED_BLUE);
+}
+
+void sensor_flash_warning() {
+  finger.LEDcontrol(FINGERPRINT_LED_FLASHING, 10, FINGERPRINT_LED_RED);
+  delay(2500);
+}
+
+void sensor_signal_success() {
+  finger.LEDcontrol(FINGERPRINT_LED_ON, 0, FINGERPRINT_LED_PURPLE);
+}
+
+void sensor_led_control(uint8_t mode, uint8_t duration, uint8_t color, uint8_t lifetime) {
+  finger.LEDcontrol(mode, duration, color, lifetime);
+}
 
 
 

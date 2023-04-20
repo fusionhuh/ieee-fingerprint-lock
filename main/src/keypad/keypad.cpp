@@ -2,11 +2,11 @@
 
 #define KEYPAD_PID1332
 
-#define R1 13
-#define C2 12
+#define R1 9
+#define C2 10
 #define C1 11
-#define C4 10
-#define C3 9
+#define C4 12
+#define C3 13
 
 #include "keypad_config.h"
 
@@ -16,19 +16,22 @@ void keypad_setup() {
     custom_keypad.begin();
 }
 
-bool is_button_pressed(char button) {
+uint8_t get_pressed_button() {
     custom_keypad.tick();
     if (custom_keypad.available()) {
         keypadEvent event = custom_keypad.read();
         if (event.bit.EVENT == KEY_JUST_PRESSED) {
-            return ((char)event.bit.KEY == button);
+            return (uint8_t) event.bit.KEY;
         }
         else {
-            return false;
+            return 0;
         }
     }
     else {
-        //Serial.println("Keypad is not available.");
-        return false;
+        return 0;
     }
+}
+
+void refresh_keypad() {
+    custom_keypad.tick();
 }

@@ -1,4 +1,5 @@
 enum buttons {
+  NO_BUTTON = '0',
   BUTTON_1 = '1',
   BUTTON_2 = '2',
   BUTTON_3 = '3',
@@ -7,4 +8,6 @@ enum buttons {
 
 void keypad_setup();
 
-bool is_button_pressed(char button);
+uint8_t get_pressed_button();
+
+void refresh_keypad();

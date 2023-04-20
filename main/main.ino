@@ -4,8 +4,41 @@
 #include "src/lock/lock.hpp"
 #include "src/keypad/keypad.hpp"
 
-#define transition_state(new_state) next_state = new_state; goto loop_start;
-#define repeat_state() goto loop_start;
+enum states {
+  WAITING,
+  FINGERPRINT_ADD,
+  FINGERPRINT_CHECK,
+  FINGERPRINT_CLEAR,
+  DOOR_UNLOCK,
+  DATABASE_SEARCH
+};
+
+#define transition_state(new_state) {\
+  next_state = new_state;\ 
+  sensor_process();\ 
+  refresh_keypad();\
+  if (new_state == FINGERPRINT_ADD || new_state == FINGERPRINT_CHECK) {\
+    sensor_led_activate();\
+  }\
+  else if (new_state == WAITING) {\
+    sensor_led_passive();\
+  }\
+  return;\
+}
+
+#define wait_for_finger_or_cancel() {\
+  sensor_process();\
+  while (no_fingerprint()) {\
+    sensor_process();\
+    delay(200);\
+    auto button_press = get_pressed_button();\
+    if (button_press == BUTTON_1) {\
+      transition_state(WAITING);\
+    }\
+  }\
+}\
+
+#define repeat_state() return;
 
 /*
 The idea of this main sketch is to essentially act as a state
@@ -16,25 +49,6 @@ Avoid nasty code in this file, i.e. all sensor & lock operations
 should be done through a library/API we have written as .cpp/.hpp files
 */
 
-enum states {
-  WAITING,
-  FINGERPRINT_ADD,
-  FINGERPRINT_CHECK,
-  FINGERPRINT_CLEAR,
-  DOOR_UNLOCK,
-  DATABASE_SEARCH
-};
-
-// from keypad.hpp:
-/*
-enum buttons { 
-  NO_BUTTON,
-  BUTTON_1,
-  BUTTON_2,
-  BUTTON_3,
-  BUTTON_4
-};
-*/
 
 /* define required states:
 
@@ -86,71 +100,43 @@ enum buttons {
 */
 
 void setup() {
-  //Heltec.begin(true /*DisplayEnable Enable*/, false /*LoRa Enable*/, true /*Serial Enable*/, true /*LoRa use PABOOST*/); // taken from factory test example
   sensor_setup();
-  //clear_database();
   lock_setup();
   keypad_setup();
+  clear_database();
 }
 
 uint8_t next_state = WAITING;
 
-
 void loop() {
-loop_start:
   switch(next_state) {
   case WAITING:
   {  
-    if (is_button_pressed(BUTTON_1)) {
+    auto button_press = get_pressed_button();
+    if (button_press == BUTTON_1) {
       Serial.println("Transitioning to FINGERPRINT_ADD");
+      sensor_led_activate();
       transition_state(FINGERPRINT_ADD);
     }
-    else if (is_button_pressed(BUTTON_2)) {
+    else if (button_press == BUTTON_2) {
       Serial.println("Transitioning to FINGERPRINT_CHECK");
       transition_state(FINGERPRINT_CHECK);
     }
-    else if (is_button_pressed(BUTTON_3)) {
+    else if (button_press == BUTTON_3) {
+      Serial.println("Transitioning to FINGERPRINT_DELETE");
       transition_state(FINGERPRINT_DELETE);
     }
-    /*while (no_fingerprint()) {
-      sensor_process();
-      Serial.println("Waiting...");
-      delay(300);
-      if (is_button_pressed(BUTTON_1)) {
-        next_state = FINGERPRINT_ADD;
-        Serial.println("Button 1 pressed!");
-        return;
-      } 
-      else if (is_button_pressed(BUTTON_3)) {
-        next_state = FINGERPRINT_DELETE;
-        return;
-      }
-    }*/
+    else if (button_press == BUTTON_4) {
+      Serial.println("lol");
+    }
 
     delay(100);
-    /*if (!is_fingerprint_ok()) {
-      print_fingerprint_status(); 
-      return; // return to beginning
-    }*/
-
-    // some kind of fingerprint detected,
-    // transition state to FINGERPRINT_CHECK
-    //next_state = FINGERPRINT_CHECK;
   }
   break;
 
   case FINGERPRINT_ADD:
   {
-    sensor_process();
-    while (no_fingerprint()) {
-      sensor_process();
-      // return to waiting state if cancel button is pressed
-      delay(500);
-      Serial.println("Waiting on fingerprint to add...");
-      if (is_button_pressed(BUTTON_1)) {
-        transition_state(WAITING);
-      }
-    }
+    wait_for_finger_or_cancel();
 
     if (!is_fingerprint_ok()) {
       print_fingerprint_status();
@@ -166,14 +152,8 @@ loop_start:
     Serial.println("Please remove your finger.");
     delay(2000);
     Serial.println("Now place the same finger again please.");
-    sensor_process();
-    while (no_fingerprint()) {
-      sensor_process();
-      // return to waiting state if cancel button is pressed
-      if (is_button_pressed(BUTTON_1)) {
-        transition_state(WAITING);
-      }
-    }
+    
+    wait_for_finger_or_cancel();
 
     if (!is_fingerprint_ok()) {
       print_fingerprint_status();
@@ -187,34 +167,28 @@ loop_start:
     }
 
     if (attempt_fingerprint_enrollment() == false) {
-      Serial.println("Enrollment failed, please try again.");
-      repeat_state();
+      Serial.println("Enrollment failed, you may have already enrolled this fingerprint.");
+      sensor_flash_warning();
+      transition_state(WAITING);
     }
 
+    sensor_led_passive();
     while ((is_fingerprint_ok() || is_image_ok())) {
-      delay(20);
+      delay(100);
       sensor_process();
       process_image();
       Serial.println("Please remove your finger.");
     }
+    sensor_signal_success();
     delay(1000);
-
+    Serial.println("Fingerprint added successfully, going back to waiting state.");
     transition_state(WAITING);
   }
   break;
   
   case FINGERPRINT_CHECK:
   {
-    sensor_process();
-    while (no_fingerprint()) {
-      sensor_process();
-      // return to waiting state if cancel button is pressed
-      delay(500);
-      Serial.println("Waiting on fingerprint to check...");
-      if (is_button_pressed(BUTTON_1)) {
-        transition_state(WAITING); // cancel
-      }
-    }
+    wait_for_finger_or_cancel();
 
     process_image();
     if (!is_image_ok()) {
@@ -225,9 +199,12 @@ loop_start:
     search_fingerprint();
     if (!is_fingerprint_found()) {
       print_search_status();
+      sensor_flash_warning();
       transition_state(WAITING);
     }
-
+    sensor_signal_success();
+    Serial.println("Print matched! Unlocking door...");
+    delay(1000);
     // YAY! fingerprint is found!
     // transition state to DOOR_UNLOCK
     transition_state(DOOR_UNLOCK);
@@ -243,9 +220,9 @@ loop_start:
 
   case DOOR_UNLOCK:
   {
-    while (true) {
-      delay(10);
-    }
+    //while (true) {
+      //delay(10);
+    //}
     unlock(5);
 
     // lock is done, transition back to

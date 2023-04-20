@@ -57,3 +57,13 @@ void clear_database();
 
 // deletes finger using finger id
 void delete_fingerprint();
+
+void sensor_led_control(uint8_t mode, uint8_t speed, uint8_t color, uint8_t duration);
+
+void sensor_led_activate();
+
+void sensor_led_passive();
+
+void sensor_signal_success();
+
+void sensor_flash_warning();
