@@ -9,7 +9,7 @@ void display_setup()
 	}
 }
 
-void display_string(string message)
+void display_string(std::string message)
 {
 	display.clearDisplay();
 	display.setTextSize(1);
