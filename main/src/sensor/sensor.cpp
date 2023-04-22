@@ -186,6 +186,17 @@ void sensor_led_control(uint8_t mode, uint8_t duration, uint8_t color, uint8_t l
   finger.LEDcontrol(mode, duration, color, lifetime);
 }
 
+void sensor_greeting() {
+  for (int i = 0; i < 5; i++)
+  {
+    finger.LEDcontrol(FINGERPRINT_LED_ON, 0, FINGERPRINT_LED_RED);
+    delay(400);
+    finger.LEDcontrol(FINGERPRINT_LED_ON, 0, FINGERPRINT_LED_BLUE);
+    delay(400);
+    finger.LEDcontrol(FINGERPRINT_LED_ON, 0, FINGERPRINT_LED_PURPLE);
+    delay(400);
+  }
+}
 
 
 

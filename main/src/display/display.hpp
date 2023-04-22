@@ -1,14 +1,23 @@
-#include <Adafruit_Fingerprint.h>
 #include <Wire.h>
+#include <SPI.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
 
-#define SCREEN_WIDTH 128 // OLED display width, in pixels
-#define SCREEN_HEIGHT 64 // OLED display height, in pixels
-Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
+/*
 
+Header file for the code interfacing with the OLED display
+
+Basically utilizes basic functions from the Adafruit library to achieve
+higher-level functionality
+
+*/
+
+
+// set up OLED display
 void display_setup();
 
-void display_string(std::string message);
+// display a string
+void display_message(String message);
 
+// clear screen
 void display_clear();

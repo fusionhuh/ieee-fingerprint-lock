@@ -64,6 +64,8 @@ void sensor_signal_success();
 
 void sensor_flash_warning();
 
+void sensor_greeting();
+
 // check if there are no templates in the sensor
 bool is_sensor_empty();
 

@@ -1,8 +1,8 @@
 #include "Arduino.h"
-#include <Adafruit_Fingerprint.h>
 #include "src/sensor/sensor.hpp"
 #include "src/lock/lock.hpp"
 #include "src/keypad/keypad.hpp"
+#include "src/display/display.hpp"
 
 enum states {
   WAITING,
@@ -100,6 +100,7 @@ should be done through a library/API we have written as .cpp/.hpp files
 
 void setup() {
   Serial.begin(9600);
+  display_setup();
   sensor_setup();
   lock_setup();
   keypad_setup();
@@ -114,17 +115,22 @@ void loop() {
   {  
     auto button_press = get_pressed_button();
     if (button_press == BUTTON_1) {
-      Serial.println("Transitioning to FINGERPRINT_ADD");
+      display_message("Add Fingerprint");
       sensor_led_activate();
       transition_state(FINGERPRINT_ADD);
     }
     else if (button_press == BUTTON_2) {
-      Serial.println("Transitioning to FINGERPRINT_CHECK");
+      display_message("Check Fingerprint");
       transition_state(FINGERPRINT_CHECK);
     }
     else if (button_press == BUTTON_3) {
-      Serial.println("Transitioning to CLEAR_DATABASE");
+      display_message("Clear Database");
       transition_state(CLEAR_DATABASE);
+    }
+    else if (button_press == BUTTON_4) {
+      display_message("Welcome!");
+      sensor_greeting();
+      display_clear();
     }
     delay(100);
   }
@@ -133,25 +139,25 @@ void loop() {
   case FINGERPRINT_ADD:
   {
     if (is_sensor_empty()) {
-      Serial.println("Database is empty, enroll first fingerprint.");
+      display_message("Database empty, enroll 1st fingerprint");
     }
     else {
-      Serial.println("Please have an authorized user give you permissions to add your fingerprint.");
+      display_message("Have authorized user scan first");
       wait_for_finger_or_cancel();
 
       process_image();
       if (!is_image_ok()) {
-        Serial.println("Issue with fingerprint image.");
+        display_message("Image error");
         transition_state(WAITING);
       }
 
       search_fingerprint();
       if (!is_fingerprint_found()) {
-        Serial.println("Fingerprint does not belong to authorized user.");
+        display_message("Unauthorized user");
         sensor_flash_warning();
         transition_state(WAITING);
       }
-      Serial.println("Authorized user detected.");
+      display_message("Authorized!");
       sensor_signal_success();
       delay(1000);
       sensor_led_activate();
@@ -159,12 +165,12 @@ void loop() {
         delay(100);
         sensor_process();
         process_image();
-        Serial.println("Please remove your finger.");
+        display_message("Remove finger");
       }
 
     }
 
-    Serial.println("Please place a new fingerprint to enroll.");
+    display_message("Place new finger");
     wait_for_finger_or_cancel();
 
     if (!is_fingerprint_ok()) {
@@ -173,13 +179,13 @@ void loop() {
 
     process_image(1); // 1 means that this is the first fingerprint used for the model
     if (!is_image_ok()) {
-      Serial.println("Sorry, your fingerprint wasn't clear enough. Please try again.");
+      display_message("Finger unclear, repeat");
       repeat_state();
     }
 
-    Serial.println("Please remove your finger.");
+    display_message("Remove finger");
     delay(2000);
-    Serial.println("Now place the same finger again please.");
+    Serial.println("Repeat");
     
     wait_for_finger_or_cancel();
 
@@ -189,12 +195,12 @@ void loop() {
 
     process_image(2); // 2 means that this is the second fingerprint used for the model
     if (!is_image_ok()) {
-      Serial.println("Sorry, your second fingerprint wasn't clear enough. Please repeat this process again.");
+      display_message("Finger unclear, repeat");
       repeat_state();
     }
 
     if (attempt_fingerprint_enrollment() == false) {
-      Serial.println("Enrollment failed, you may have already enrolled this fingerprint.");
+      display_message("Failed, finger enrolled already");
       sensor_flash_warning();
       transition_state(WAITING);
     }
@@ -204,11 +210,11 @@ void loop() {
       delay(100);
       sensor_process();
       process_image();
-      Serial.println("Please remove your finger.");
+      display_message("Remove finger");
     }
     sensor_signal_success();
     delay(1000);
-    Serial.println("Fingerprint added successfully, going back to waiting state.");
+    display_message("Finger added");
     transition_state(WAITING);
   }
   break;
@@ -228,7 +234,7 @@ void loop() {
       transition_state(WAITING);
     }
     sensor_signal_success();
-    Serial.println("Print matched! Unlocking door...");
+    display_message("Match!");
     delay(1000);
     // YAY! fingerprint is found!
     // transition state to DOOR_UNLOCK
@@ -238,23 +244,26 @@ void loop() {
 
   case CLEAR_DATABASE:
   {
-    Serial.println("Only the first authorized user can clear the database. Please touch your finger.");
+    display_message("Place original finger");
     sensor_led_activate();
     wait_for_finger_or_cancel();
     process_image();
     if (!is_image_ok()) {
       transition_state(WAITING);
+      display_message("Failed");
     }
 
     search_fingerprint();
     if (!is_finger_master()) {
       sensor_flash_warning();
       transition_state(WAITING);
+      display_message("Not original finger");
     }
 
-    Serial.println("Clearing database...");
+    Serial.println("Clearing database");
     sensor_signal_success();
     clear_database();
+    delay(50);
     transition_state(WAITING);
   }
   break;
@@ -277,7 +286,7 @@ void loop() {
   break;
 
   default: // some severe error has occurred
-    Serial.println("Severe error has occurred (no recognizable state)");
+    display_message("Error: unrecognizable state");
     return;
   }
 }
