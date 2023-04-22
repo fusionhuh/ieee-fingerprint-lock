@@ -8,9 +8,8 @@ enum states {
   WAITING,
   FINGERPRINT_ADD,
   FINGERPRINT_CHECK,
-  FINGERPRINT_CLEAR,
   DOOR_UNLOCK,
-  DATABASE_SEARCH
+  CLEAR_DATABASE
 };
 
 #define transition_state(new_state) {\
@@ -100,6 +99,7 @@ should be done through a library/API we have written as .cpp/.hpp files
 */
 
 void setup() {
+  Serial.begin(9600);
   sensor_setup();
   lock_setup();
   keypad_setup();
@@ -123,23 +123,51 @@ void loop() {
       transition_state(FINGERPRINT_CHECK);
     }
     else if (button_press == BUTTON_3) {
-      Serial.println("Transitioning to FINGERPRINT_DELETE");
-      transition_state(FINGERPRINT_DELETE);
+      Serial.println("Transitioning to CLEAR_DATABASE");
+      transition_state(CLEAR_DATABASE);
     }
-    else if (button_press == BUTTON_4) {
-      Serial.println("lol");
-    }
-
     delay(100);
   }
   break;
 
   case FINGERPRINT_ADD:
   {
+    if (is_sensor_empty()) {
+      Serial.println("Database is empty, enroll first fingerprint.");
+    }
+    else {
+      Serial.println("Please have an authorized user give you permissions to add your fingerprint.");
+      wait_for_finger_or_cancel();
+
+      process_image();
+      if (!is_image_ok()) {
+        Serial.println("Issue with fingerprint image.");
+        transition_state(WAITING);
+      }
+
+      search_fingerprint();
+      if (!is_fingerprint_found()) {
+        Serial.println("Fingerprint does not belong to authorized user.");
+        sensor_flash_warning();
+        transition_state(WAITING);
+      }
+      Serial.println("Authorized user detected.");
+      sensor_signal_success();
+      delay(1000);
+      sensor_led_activate();
+      while ((is_fingerprint_ok() || is_image_ok())) {
+        delay(100);
+        sensor_process();
+        process_image();
+        Serial.println("Please remove your finger.");
+      }
+
+    }
+
+    Serial.println("Please place a new fingerprint to enroll.");
     wait_for_finger_or_cancel();
 
     if (!is_fingerprint_ok()) {
-      print_fingerprint_status();
       repeat_state();
     }
 
@@ -156,7 +184,6 @@ void loop() {
     wait_for_finger_or_cancel();
 
     if (!is_fingerprint_ok()) {
-      print_fingerprint_status();
       repeat_state();
     }
 
@@ -192,13 +219,11 @@ void loop() {
 
     process_image();
     if (!is_image_ok()) {
-      print_image_status();
       transition_state(WAITING);
     }
 
     search_fingerprint();
     if (!is_fingerprint_found()) {
-      print_search_status();
       sensor_flash_warning();
       transition_state(WAITING);
     }
@@ -211,29 +236,43 @@ void loop() {
   }
   break;
 
-  case FINGERPRINT_DELETE:
+  case CLEAR_DATABASE:
   {
-    delete_fingerprint();
+    Serial.println("Only the first authorized user can clear the database. Please touch your finger.");
+    sensor_led_activate();
+    wait_for_finger_or_cancel();
+    process_image();
+    if (!is_image_ok()) {
+      transition_state(WAITING);
+    }
+
+    search_fingerprint();
+    if (!is_finger_master()) {
+      sensor_flash_warning();
+      transition_state(WAITING);
+    }
+
+    Serial.println("Clearing database...");
+    sensor_signal_success();
+    clear_database();
     transition_state(WAITING);
   }
   break;
 
   case DOOR_UNLOCK:
   {
-    //while (true) {
-      //delay(10);
-    //}
-    unlock(5);
-
-    // lock is done, transition back to
-    // waiting state
-    transition_state(WAITING);
-  }
-  break;
-
-  case DATABASE_SEARCH:
-  {
-    // listen for button inputs
+    auto button_press = get_pressed_button();
+    if (button_press == BUTTON_1) {
+      lock();
+      transition_state(WAITING);
+    }
+    else if (button_press == BUTTON_2) {
+      unlock();
+    }
+    else if (button_press == BUTTON_3) {
+      lock();
+    }
+    delay(50);
   }
   break;
 

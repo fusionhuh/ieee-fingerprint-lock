@@ -5,18 +5,23 @@ static uint8_t curr_image_status = 0;
 static uint8_t curr_search_status = 0;
 static uint16_t running_id = 1;
 static uint8_t finger_id = 1;
+static uint8_t running_count = 0;
 
 SoftwareSerial mySerial(2, 3);
 static Adafruit_Fingerprint finger(&mySerial);
 
+bool is_sensor_empty() {
+  return running_count == 0;
+}
+
 void sensor_setup() {
-    Serial.begin(9600);
+    //Serial.begin(9600);
     while(!Serial);
     delay(100);
     Serial.println("\nAdafruit finger detect test\n");
 
     finger.begin(57600);
-    finger.LEDcontrol(FINGERPRINT_LED_OFF, 0, FINGERPRINT_LED_RED);
+    //finger.LEDcontrol(FINGERPRINT_LED_OFF, 0, FINGERPRINT_LED_RED);
     delay(5);
     if (finger.verifyPassword()) {
         Serial.println("Found fingerprint sensor!");
@@ -27,16 +32,6 @@ void sensor_setup() {
             delay(1);
         }
     }
-
-    Serial.println(F("Reading sensor parameters"));
-    finger.getParameters();
-    Serial.print(F("Status: 0x")); Serial.println(finger.status_reg, HEX);
-    Serial.print(F("Sys ID: 0x")); Serial.println(finger.system_id, HEX);
-    Serial.print(F("Capacity: ")); Serial.println(finger.capacity);
-    Serial.print(F("Security level: ")); Serial.println(finger.security_level);
-    Serial.print(F("Device address: ")); Serial.println(finger.device_addr, HEX);
-    Serial.print(F("Packet len: ")); Serial.println(finger.packet_len);
-    Serial.print(F("Baud rate: ")); Serial.println(finger.baud_rate);
     finger.LEDcontrol(FINGERPRINT_LED_ON, 0, FINGERPRINT_LED_BLUE);
 }
 
@@ -87,30 +82,16 @@ bool is_image_ok() {
 }
 
 void print_image_status() {
-    switch(curr_image_status) {
-    case FINGERPRINT_OK:
-      Serial.println("Image converted");
-      break;
-    case FINGERPRINT_IMAGEMESS:
-      Serial.println("Image too messy");
-      break;
-    case FINGERPRINT_PACKETRECIEVEERR:
-      Serial.println("Communication error");
-      break;
-    case FINGERPRINT_FEATUREFAIL:
-      Serial.println("Could not find fingerprint features");
-      break;
-    case FINGERPRINT_INVALIDIMAGE:
-      Serial.println("Could not find fingerprint features");
-      break;
-    default:
-      Serial.println("Unknown error");
-      break;
-    }
 }
 
 void search_fingerprint() {
     curr_search_status = finger.fingerSearch();
+}
+
+bool is_finger_master() {
+  Serial.println(finger.fingerID);
+  if (!is_fingerprint_found()) return false;
+  return finger.fingerID == 1;
 }
 
 bool is_fingerprint_found() {
@@ -118,94 +99,60 @@ bool is_fingerprint_found() {
 }
 
 void print_search_status() {
-    if (curr_search_status == FINGERPRINT_OK) {
-        Serial.println("Found a print match!");
-    } 
-    else if (curr_search_status == FINGERPRINT_PACKETRECIEVEERR) {
-        Serial.println("Communication error");
-    } 
-    else if (curr_search_status == FINGERPRINT_NOTFOUND) {
-        Serial.println("Did not find a match");
-    } 
-    else {
-        Serial.println("Unknown error");
-    }
 }
 
 bool attempt_fingerprint_enrollment() {
   search_fingerprint();
   if (curr_search_status == FINGERPRINT_OK) {
-    Serial.println("Fingerprint is already stored!");
     return false;
   }
   else if (curr_search_status != FINGERPRINT_NOTFOUND) {
-    Serial.println("Unknown error has occurred while checking fingerprint against database");
     return false;
   }
 
   auto model_status = finger.createModel();
   if (model_status == FINGERPRINT_OK) {
-    Serial.println("Prints matched!");
   }
   else if (model_status == FINGERPRINT_PACKETRECIEVEERR) {
-    Serial.println("Communication error");
     return false;
   }
   else if (model_status == FINGERPRINT_ENROLLMISMATCH) {
-    Serial.println("Fingerprints did not match");
     return false;
   }
   else {
-    Serial.println("Unknown error");
     return false;
   }
 
   auto store_status = finger.storeModel(running_id++);
   Serial.print(running_id);
   if (store_status == FINGERPRINT_OK) {
-    Serial.println("Fingerprint stored!");
+    running_count++;
     return true;
   }
   else if (store_status == FINGERPRINT_PACKETRECIEVEERR) {
-    Serial.println("Communication error");
     return false;
   }
   else if (store_status == FINGERPRINT_BADLOCATION) {
-    Serial.println("It seems as though this ID is already in use.");
     return false;
   }
   else if (store_status == FINGERPRINT_FLASHERR) {
-    Serial.println("Error writing to flash.");
     return false;
   }
   else {
-    Serial.println("Unknown error");
     return false;
   }
 }
 
 void clear_database() {
   finger.emptyDatabase();
+  running_count = 0;
+  running_id = 1;
 }
 
 void delete_fingerprint() {
   //search_fingerprint();
   auto p = finger.deleteModel(finger.fingerID);
 
-  switch (p) {
-    case FINGERPRINT_OK:
-      Serial.println("Deleted!");
-      break;
-    case FINGERPRINT_PACKETRECIEVEERR:
-      Serial.println("Communication error");
-      break;
-    case FINGERPRINT_BADLOCATION:
-      Serial.println("Could not delete in that location");
-      break;
-    case FINGERPRINT_FLASHERR:
-      Serial.println("Error writing to flash");
-      break;
-  }
   // turn LED blue
   /*
   finger.LEDcontrol(FINGERPRINT_LED_ON, 0, FINGERPRINT_LED_BLUE);

@@ -3,5 +3,7 @@
 
 void lock_setup();
 
-void unlock(uint32_t output_pin);
+void unlock();
+
+void lock();
 

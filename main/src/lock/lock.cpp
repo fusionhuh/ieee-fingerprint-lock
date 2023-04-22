@@ -1,19 +1,16 @@
 #include <Arduino.h>
 
-static uint8_t output_pin = 8;
+static const uint8_t output_pin = 7;
 
 void lock_setup() {
-    digitalWrite(output_pin, HIGH);
-    delay(2000);
-    digitalWrite(output_pin, LOW);
-    delay(2000);
-    digitalWrite(output_pin, HIGH);
-    delay(2000);
+    pinMode(output_pin, OUTPUT);
     digitalWrite(output_pin, LOW);
 }
 
-void unlock(uint32_t output_pin) {
-    digitalWrite(output_pin, HIGH);
-    delay(3000);
+void unlock() {
     digitalWrite(output_pin, LOW);
+}
+
+void lock() {
+    digitalWrite(output_pin, HIGH);
 }
