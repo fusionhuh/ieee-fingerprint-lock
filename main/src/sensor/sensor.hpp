@@ -9,11 +9,7 @@ higher-level functionality
 
 */
 
-
-
 //extern HardwareSerial mySerial;
-
-
 
 // set up the fingerprint sensor
 void sensor_setup();
@@ -67,3 +63,8 @@ void sensor_led_passive();
 void sensor_signal_success();
 
 void sensor_flash_warning();
+
+// check if there are no templates in the sensor
+bool is_sensor_empty();
+
+bool is_finger_master();
